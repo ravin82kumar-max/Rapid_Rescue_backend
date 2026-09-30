@@ -254,7 +254,10 @@ async def cancel_emergency(
     if emergency.patient_id:
         await ws_manager.send_event_to_patient(key=emergency.patient_id, event_type="EMERGENCY_CANCELLED", data=cancel_payload)
     if emergency.assigned_driver_id:
+        await ws_manager.send_event_to_driver(driver_id=emergency.assigned_driver_id, event_type="EMERGENCY_CANCELLED", data=cancel_payload)
         await ws_manager.send_event_to_driver(driver_id=emergency.assigned_driver_id, event_type="REQUEST_UPDATE", data=cancel_payload)
+    if emergency.current_candidate_driver_id and emergency.current_candidate_driver_id != emergency.assigned_driver_id:
+        await ws_manager.send_event_to_driver(driver_id=emergency.current_candidate_driver_id, event_type="EMERGENCY_CANCELLED", data=cancel_payload)
 
     return EmergencyCancelResponse(
         success=True,

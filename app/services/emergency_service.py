@@ -87,6 +87,19 @@ class EmergencyService:
                 detail=f"Cannot cancel emergency in COMPLETED status."
             )
 
+        assigned_driver_id = emergency.assigned_driver_id
+        candidate_driver_id = emergency.current_candidate_driver_id
+        emergency.current_candidate_driver_id = None
+        emergency.response_deadline = None
+
+        if assigned_driver_id or candidate_driver_id:
+            driver_id_to_free = assigned_driver_id or candidate_driver_id
+            from app.models.driver import Driver, DutyStatus, AvailabilityStatus
+            driver_stmt = select(Driver).where(Driver.id == driver_id_to_free)
+            driver = (await db.execute(driver_stmt)).scalar_one_or_none()
+            if driver and driver.duty_status == DutyStatus.ONLINE.value:
+                driver.availability_status = AvailabilityStatus.AVAILABLE.value
+
         emergency.status = EmergencyStatus.CANCELLED.value
         await db.commit()
         await db.refresh(emergency)

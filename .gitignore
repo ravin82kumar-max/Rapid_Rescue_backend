@@ -1,2 +1,9 @@
 node_modules/
 .neon
+venv/
+__pycache__/
+*.pyc
+uploads/emergencies/*
+uploads/driver_documents/*
+scratch/
+.pytest_cache/

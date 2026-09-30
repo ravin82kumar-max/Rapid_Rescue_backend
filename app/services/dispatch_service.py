@@ -145,6 +145,11 @@ class DispatchService:
             "emergencyId": str(emergency.id),
             "emergencyType": emergency.emergency_type or "MEDICAL_EMERGENCY",
             "priority": priority_upper,
+            "patientName": emergency.patient_name or emergency.patient_id,
+            "patientPhone": emergency.patient_phone or "",
+            "patientPhoto": f"/api/v1/emergencies/{emergency.id}/photos/front",
+            "photoUrl": f"/api/v1/emergencies/{emergency.id}/photos/front",
+            "pickupAddress": emergency.pickup_address or "",
             "patient": {
                 "name": emergency.patient_name or emergency.patient_id,
                 "phone": emergency.patient_phone or "",
@@ -158,12 +163,16 @@ class DispatchService:
                 "latitude": emergency.latitude,
                 "longitude": emergency.longitude,
             },
+            "latitude": emergency.latitude,
+            "longitude": emergency.longitude,
             "createdAt": created_at_iso,
             "responseDeadline": deadline.isoformat(),
             "timeoutSeconds": timeout_seconds,
+            "distance": round(dist_km, 2),
             "distanceKm": round(dist_km, 2),
         }
         if eta_minutes is not None:
+            ws_payload["eta"] = eta_minutes
             ws_payload["etaMinutes"] = eta_minutes
 
         await ws_manager.send_event_to_driver(
@@ -382,7 +391,9 @@ class DispatchService:
                 "emergencyId": request_id_str,
                 "latitude": emergency.latitude,
                 "longitude": emergency.longitude,
-                "accuracy": emergency.accuracy
+                "accuracy": emergency.accuracy,
+                "address": emergency.pickup_address or "",
+                "updatedAt": now.isoformat(),
             }
             await ws_manager.send_event_to_driver(driver_id=driver.id, event_type="PATIENT_LOCATION", data=patient_loc_payload)
 

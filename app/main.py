@@ -17,14 +17,31 @@ from app.api import (
     patient_router,
 )
 
+from contextlib import asynccontextmanager
+from app.database.database import engine, AsyncSessionLocal
+from app.services.admin_service import AdminService
+
 # Ensure upload directories exist
 os.makedirs("uploads/emergencies", exist_ok=True)
 os.makedirs("uploads/driver_documents", exist_ok=True)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Seed default admin user if database is empty of admins
+    async with AsyncSessionLocal() as session:
+        try:
+            await AdminService.create_default_admin_if_none(session)
+        except Exception as e:
+            print(f"Admin seeding notice: {e}")
+    yield
+
+
 app = FastAPI(
     title="RapidRescue API",
-    description="Emergency Ambulance Backend - Patient, Driver & Ambulance Modules",
-    version="1.0.0"
+    description="Emergency Ambulance Backend - Patient, Driver & Admin Modules",
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Serve uploaded files statically

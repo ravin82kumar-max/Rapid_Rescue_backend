@@ -75,6 +75,13 @@ async def get_current_driver(
     token = credentials.credentials
     payload = decode_access_token(token)
 
+    role = payload.get("role")
+    if role and role != "DRIVER":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Driver access required.",
+        )
+
     driver_id = payload.get("driver_id") or payload.get("sub")
     if not driver_id:
         raise HTTPException(
@@ -184,4 +191,66 @@ async def get_optional_patient(
         return result.scalar_one_or_none()
     except Exception:
         return None
+
+
+async def get_current_admin(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+    db: AsyncSession = Depends(get_db),
+):
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token missing or invalid.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = credentials.credentials
+    payload = decode_access_token(token)
+
+    role = payload.get("role")
+    if role and role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Admin access required.",
+        )
+
+    admin_identity = payload.get("admin_id") or payload.get("sub")
+    if not admin_identity:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token payload is missing admin identity.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    import uuid
+    from app.models.admin_user import AdminUser
+
+    try:
+        admin_uuid = uuid.UUID(str(admin_identity))
+    except ValueError:
+        admin_uuid = None
+
+    if admin_uuid:
+        stmt = select(AdminUser).where((AdminUser.id == admin_uuid) | (AdminUser.admin_id == str(admin_identity)))
+    else:
+        stmt = select(AdminUser).where((AdminUser.admin_id == str(admin_identity)) | (AdminUser.email == str(admin_identity)))
+
+    result = await db.execute(stmt)
+    admin = result.scalar_one_or_none()
+
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Admin account not found.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not admin.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin account is deactivated.",
+        )
+
+    return admin
+
 

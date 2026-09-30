@@ -153,8 +153,22 @@ class VerificationService:
                 detail=f"Verification submission incomplete. Missing required documents: {sorted(list(missing_types))}"
             )
 
+        prev_status = driver.verification_status
         driver.verification_status = VerificationStatus.PENDING.value
         driver.updated_at = datetime.now(timezone.utc)
+
+        from app.models.admin_verification_action import AdminVerificationAction, VerificationActionEnum
+        action_name = VerificationActionEnum.RESUBMIT.value if prev_status == VerificationStatus.REJECTED.value else "SUBMIT"
+        action = AdminVerificationAction(
+            driver_id=driver.id,
+            admin_id=None,
+            action=action_name,
+            previous_status=prev_status,
+            new_status=VerificationStatus.PENDING.value,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(action)
+
         await db.commit()
         await db.refresh(driver)
         return driver

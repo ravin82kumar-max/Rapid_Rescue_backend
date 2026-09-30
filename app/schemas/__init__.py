@@ -45,6 +45,17 @@ from app.schemas.patient import (
     PatientUpdateSchema,
 )
 
+from app.schemas.admin import (
+    AdminLoginSchema,
+    AdminLoginResponse,
+    AdminProfileSchema,
+    AdminDashboardSummarySchema,
+    AdminDriverListItemSchema,
+    AdminDocumentItemSchema,
+    AdminAmbulanceSchema,
+    AdminDriverDetailSchema,
+)
+
 __all__ = [
     "EmergencyCreateResponse",
     "EmergencyStatusResponse",
@@ -76,5 +87,14 @@ __all__ = [
     "PatientLoginResponse",
     "PatientProfileSchema",
     "PatientUpdateSchema",
+    "AdminLoginSchema",
+    "AdminLoginResponse",
+    "AdminProfileSchema",
+    "AdminDashboardSummarySchema",
+    "AdminDriverListItemSchema",
+    "AdminDocumentItemSchema",
+    "AdminAmbulanceSchema",
+    "AdminDriverDetailSchema",
 ]
+
 

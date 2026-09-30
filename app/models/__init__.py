@@ -5,6 +5,8 @@ from app.models.ambulance import Ambulance, AmbulanceType
 from app.models.driver_location import DriverLocation
 from app.models.emergency_response import EmergencyResponse, ResponseAction
 from app.models.patient import Patient
+from app.models.admin_user import AdminUser
+from app.models.admin_verification_action import AdminVerificationAction, VerificationActionEnum
 
 __all__ = [
     "Emergency",
@@ -23,5 +25,9 @@ __all__ = [
     "EmergencyResponse",
     "ResponseAction",
     "Patient",
+    "AdminUser",
+    "AdminVerificationAction",
+    "VerificationActionEnum",
 ]
+
 

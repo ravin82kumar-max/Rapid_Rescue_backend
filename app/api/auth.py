@@ -150,3 +150,32 @@ async def patient_login(
         createdAt=c_at,
     )
 
+
+from app.services.admin_service import AdminService
+from app.schemas.admin import AdminLoginSchema, AdminLoginResponse
+
+
+@router.post("/admin/login", response_model=AdminLoginResponse)
+async def admin_login(
+    data: AdminLoginSchema,
+    db: AsyncSession = Depends(get_db),
+):
+    admin, token = await AdminService.admin_login(
+        db=db,
+        identifier=data.identifier,
+        password=data.password,
+    )
+
+    return AdminLoginResponse(
+        success=True,
+        message="Admin login successful",
+        adminId=admin.admin_id,
+        fullName=admin.full_name,
+        email=admin.email,
+        role=admin.role or "ADMIN",
+        token=token,
+        isMockSession=False,
+        createdAt=admin.created_at.isoformat(),
+    )
+
+

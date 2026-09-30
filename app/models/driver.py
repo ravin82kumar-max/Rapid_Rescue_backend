@@ -2,9 +2,13 @@ import enum
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import String, Integer, DateTime, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from typing import List, TYPE_CHECKING
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
+
+if TYPE_CHECKING:
+    from app.models.admin_verification_action import AdminVerificationAction
 
 
 class VerificationStatus(str, enum.Enum):
@@ -54,3 +58,8 @@ class Driver(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False
     )
+
+    verification_actions: Mapped[List["AdminVerificationAction"]] = relationship(
+        "AdminVerificationAction", back_populates="driver", cascade="all, delete-orphan"
+    )
+

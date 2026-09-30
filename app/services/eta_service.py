@@ -31,7 +31,11 @@ class ETAService:
             return False
 
         try:
-            cls._model = joblib.load(cls._model_path)
+            import warnings
+            from sklearn.exceptions import InconsistentVersionWarning
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=InconsistentVersionWarning)
+                cls._model = joblib.load(cls._model_path)
             cls._model_loaded = True
             logger.info("ETA model loaded successfully.")
             return True

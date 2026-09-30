@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException, s
 from fastapi.responses import FileResponse
 import os
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.database.database import get_db
 from app.services.emergency_service import EmergencyService
 from app.services.dispatch_service import DispatchService

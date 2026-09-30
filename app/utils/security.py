@@ -96,3 +96,92 @@ async def get_current_driver(
         )
 
     return driver
+
+
+async def get_current_patient(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+    db: AsyncSession = Depends(get_db),
+):
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token missing or invalid.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = credentials.credentials
+    payload = decode_access_token(token)
+
+    role = payload.get("role")
+    if role and role != "PATIENT":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Patient access required.",
+        )
+
+    patient_id = payload.get("patient_id") or payload.get("sub")
+    if not patient_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token payload is missing patient identity.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    import uuid
+    from app.models.patient import Patient
+
+    try:
+        patient_uuid = uuid.UUID(str(patient_id))
+    except ValueError:
+        patient_uuid = None
+
+    if patient_uuid:
+        stmt = select(Patient).where(Patient.id == patient_uuid)
+    else:
+        stmt = select(Patient).where(Patient.id == str(patient_id))
+
+    result = await db.execute(stmt)
+    patient = result.scalar_one_or_none()
+
+    if not patient:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Patient account not found.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return patient
+
+
+async def get_optional_patient(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+    db: AsyncSession = Depends(get_db),
+):
+    if not credentials or not credentials.credentials:
+        return None
+
+    try:
+        token = credentials.credentials
+        payload = decode_access_token(token)
+        patient_id = payload.get("patient_id") or payload.get("sub")
+        if not patient_id:
+            return None
+
+        import uuid
+        from app.models.patient import Patient
+
+        try:
+            patient_uuid = uuid.UUID(str(patient_id))
+        except ValueError:
+            patient_uuid = None
+
+        if patient_uuid:
+            stmt = select(Patient).where(Patient.id == patient_uuid)
+        else:
+            stmt = select(Patient).where(Patient.id == str(patient_id))
+
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+    except Exception:
+        return None
+

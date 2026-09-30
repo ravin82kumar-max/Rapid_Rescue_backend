@@ -32,16 +32,21 @@ def create_dummy_image_bytes() -> bytes:
 
 @pytest.mark.asyncio
 async def test_full_realtime_tracking_bidirectional_flow():
-    try:
-        async with AsyncSessionLocal() as db:
+    async with AsyncSessionLocal() as db:
             # 1. Register candidate driver and ambulance
-            driver_id = f"DRV-RTRACK-{os.urandom(4).hex()}"
+            import uuid
+            driver_id = f"DRV-RTRACK-{uuid.uuid4().hex[:8]}"
+            unique_str = uuid.uuid4().hex[:8]
             driver = Driver(
                 id=driver_id,
                 full_name="John Driver",
-                mobile_number=f"987{os.urandom(3).hex()[:7]}",
-                email=f"driver_{os.urandom(4).hex()}@example.com",
+                mobile_number=f"9{uuid.uuid4().int % 1000000000:09d}",
+                email=f"driver_{unique_str}@example.com",
+
+
                 hashed_password="hashed_pw",
+
+
                 verification_status=VerificationStatus.VERIFIED.value,
                 duty_status=DutyStatus.ONLINE.value,
                 availability_status=AvailabilityStatus.AVAILABLE.value,
@@ -181,5 +186,4 @@ async def test_full_realtime_tracking_bidirectional_flow():
             # Verify Driver becomes AVAILABLE again
             await db.refresh(driver)
             assert driver.availability_status == AvailabilityStatus.AVAILABLE.value
-    finally:
-        await engine.dispose()
+

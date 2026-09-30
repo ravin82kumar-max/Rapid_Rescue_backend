@@ -4,6 +4,7 @@ from app.models.driver_document import DriverDocument, DocumentType, DocumentCat
 from app.models.ambulance import Ambulance, AmbulanceType
 from app.models.driver_location import DriverLocation
 from app.models.emergency_response import EmergencyResponse, ResponseAction
+from app.models.patient import Patient
 
 __all__ = [
     "Emergency",
@@ -21,4 +22,6 @@ __all__ = [
     "DriverLocation",
     "EmergencyResponse",
     "ResponseAction",
+    "Patient",
 ]
+

@@ -14,12 +14,38 @@ class Settings(BaseSettings):
         extra = "allow"
 
 
+import urllib.parse
+
+
+def clean_asyncpg_url(url: str) -> str:
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+
+    parsed = urllib.parse.urlparse(url)
+    if parsed.query:
+        query_params = urllib.parse.parse_qs(parsed.query)
+        query_params.pop("sslmode", None)
+        query_params.pop("channel_binding", None)
+        if "ssl" not in query_params:
+            query_params["ssl"] = ["require"]
+        new_query = urllib.parse.urlencode(query_params, doseq=True)
+        parsed = parsed._replace(query=new_query)
+        url = urllib.parse.urlunparse(parsed)
+    return url
+
+
 settings = Settings()
+db_url = clean_asyncpg_url(settings.DATABASE_URL)
 
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    db_url,
     echo=True
 )
+
+
+
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

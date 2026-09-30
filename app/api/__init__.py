@@ -7,6 +7,7 @@ from app.api.location import router as location_router
 from app.api.dispatch import router as dispatch_router
 from app.api.websocket import router as websocket_router
 from app.api.ambulance import router as ambulance_router
+from app.api.patient import router as patient_router
 
 __all__ = [
     "emergency_router",
@@ -18,4 +19,6 @@ __all__ = [
     "dispatch_router",
     "websocket_router",
     "ambulance_router",
+    "patient_router",
 ]
+

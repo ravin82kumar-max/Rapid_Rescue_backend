@@ -8,7 +8,8 @@ from app.services.dispatch_service import DispatchService
 from app.services.severity_service import SeverityService
 from app.services.eta_service import ETAService
 from app.utils.file_utils import validate_image_file, save_upload_file
-from app.utils.security import decode_access_token
+from app.utils.security import decode_access_token, get_optional_patient
+from app.models.patient import Patient
 from app.schemas.emergency import (
     EmergencyCreateResponse,
     EmergencyStatusResponse,
@@ -37,15 +38,26 @@ async def create_emergency(
     patient_phone: str | None = Form(default=None, description="Patient phone number"),
     pickup_address: str | None = Form(default=None, description="Pickup address description"),
     emergency_type: str | None = Form(default="MEDICAL_EMERGENCY", description="Emergency category"),
+    current_patient: Patient | None = Depends(get_optional_patient),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Identifier validation
-    identifier = patient_id or device_id or patient_device_id
-    if not identifier or not identifier.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Patient or device identifier is required (patient_id or device_id)."
-        )
+    # 1. Identifier validation & patient derivation
+    if current_patient:
+        effective_patient_id = str(current_patient.id)
+        effective_patient_name = patient_name or current_patient.full_name
+        effective_patient_phone = patient_phone or current_patient.mobile_number
+        effective_pickup_address = pickup_address or current_patient.address
+    else:
+        identifier = patient_id or device_id or patient_device_id
+        if not identifier or not identifier.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Patient or device identifier is required (patient_id or device_id)."
+            )
+        effective_patient_id = identifier.strip()
+        effective_patient_name = patient_name
+        effective_patient_phone = patient_phone
+        effective_pickup_address = pickup_address
 
     # 2. Coordinate & accuracy validation
     if not (-90.0 <= latitude <= 90.0):
@@ -97,7 +109,7 @@ async def create_emergency(
     # 7. Create emergency in DB
     emergency = await EmergencyService.create_emergency(
         db=db,
-        patient_id=identifier.strip(),
+        patient_id=effective_patient_id,
         front_photo_path=front_url,  # Store standard relative URL path
         rear_photo_path=rear_url,
         latitude=latitude,
@@ -105,11 +117,12 @@ async def create_emergency(
         accuracy=accuracy,
         timestamp=parsed_timestamp,
         priority=effective_priority,
-        patient_name=patient_name,
-        patient_phone=patient_phone,
-        pickup_address=pickup_address,
+        patient_name=effective_patient_name,
+        patient_phone=effective_patient_phone,
+        pickup_address=effective_pickup_address,
         emergency_type=emergency_type or "MEDICAL_EMERGENCY",
     )
+
 
     # 8. Automatically dispatch offer to nearest eligible candidate driver
     dispatch_info = await DispatchService.dispatch_to_next_candidate(

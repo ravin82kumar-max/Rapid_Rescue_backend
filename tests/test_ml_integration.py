@@ -65,146 +65,138 @@ def test_severity_prediction_valid_sample():
 # Test 5: Emergency Creation Endpoint Works
 @pytest.mark.asyncio
 async def test_emergency_creation_endpoint():
-    try:
-        img_bytes = create_dummy_image_bytes()
-        files = {
-            "front_photo": ("front.jpg", img_bytes, "image/jpeg"),
-            "rear_photo": ("rear.jpg", img_bytes, "image/jpeg"),
-        }
-        data = {
-            "latitude": "12.9716",
-            "longitude": "77.5946",
-            "accuracy": "5.0",
-            "patient_id": "TEST_PATIENT_101",
-        }
+    img_bytes = create_dummy_image_bytes()
+    files = {
+        "front_photo": ("front.jpg", img_bytes, "image/jpeg"),
+        "rear_photo": ("rear.jpg", img_bytes, "image/jpeg"),
+    }
+    data = {
+        "latitude": "12.9716",
+        "longitude": "77.5946",
+        "accuracy": "5.0",
+        "patient_id": "TEST_PATIENT_101",
+    }
 
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post("/api/v1/emergencies", files=files, data=data)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/emergencies", files=files, data=data)
 
-        assert response.status_code == 201
-        res_json = response.json()
-        assert res_json["success"] is True
-        assert "emergency_id" in res_json
-        assert res_json["status"] == "SEARCHING"
-        assert "priority" in res_json
-    finally:
-        await engine.dispose()
+    assert response.status_code == 201
+    res_json = response.json()
+    assert res_json["success"] is True
+    assert "emergency_id" in res_json
+    assert res_json["status"] == "SEARCHING"
+    assert "priority" in res_json
 
 
 # Test 6, 7, 8, 9: Full Dispatch & Lifecycle Integration
 @pytest.mark.asyncio
 async def test_full_emergency_dispatch_lifecycle():
-    try:
-        async with AsyncSessionLocal() as db:
-            # 1. Create candidate driver in DB
-            driver_id = f"DRV-TEST-{os.urandom(4).hex()}"
-            driver = Driver(
-                id=driver_id,
-                full_name="Test Driver",
-                mobile_number=f"999{os.urandom(3).hex()[:7]}",
-                email=f"test_{os.urandom(4).hex()}@example.com",
-                hashed_password="hashed_pw",
-                verification_status=VerificationStatus.VERIFIED.value,
-                duty_status=DutyStatus.ONLINE.value,
-                availability_status=AvailabilityStatus.AVAILABLE.value,
-            )
-            db.add(driver)
-            await db.commit()
+    async with AsyncSessionLocal() as db:
+        # 1. Create candidate driver in DB
+        import uuid
+        driver_id = f"DRV-TEST-{uuid.uuid4().hex[:8]}"
+        driver = Driver(
+            id=driver_id,
+            full_name="Test Driver",
+            mobile_number=f"99{uuid.uuid4().int % 100000000:08d}",
+            email=f"test_{uuid.uuid4().hex[:8]}@example.com",
+            hashed_password="hashed_pw",
+            verification_status=VerificationStatus.VERIFIED.value,
+            duty_status=DutyStatus.ONLINE.value,
+            availability_status=AvailabilityStatus.AVAILABLE.value,
+        )
+        db.add(driver)
+        await db.commit()
 
-            # 2. Add driver location ping
-            loc = DriverLocation(
-                driver_id=driver_id,
-                latitude=12.9720,
-                longitude=77.5950,
-                accuracy_meters=5.0,
-                recorded_at=datetime.now(timezone.utc),
-            )
-            db.add(loc)
-            await db.commit()
+        # 2. Add driver location ping
+        loc = DriverLocation(
+            driver_id=driver_id,
+            latitude=12.9720,
+            longitude=77.5950,
+            accuracy_meters=5.0,
+            recorded_at=datetime.now(timezone.utc),
+        )
+        db.add(loc)
+        await db.commit()
 
-            # 3. Create Emergency in DB
-            emergency = Emergency(
-                patient_id="TEST_PATIENT_LIFECYCLE",
-                front_photo_path="/uploads/test_front.jpg",
-                rear_photo_path="/uploads/test_rear.jpg",
-                latitude=12.9716,
-                longitude=77.5946,
-                accuracy=5.0,
-                status=EmergencyStatus.SEARCHING.value,
-                priority="CRITICAL",
-            )
-            db.add(emergency)
-            await db.commit()
-            await db.refresh(emergency)
+        # 3. Create Emergency in DB
+        emergency = Emergency(
+            patient_id="TEST_PATIENT_LIFECYCLE",
+            front_photo_path="/uploads/test_front.jpg",
+            rear_photo_path="/uploads/test_rear.jpg",
+            latitude=12.9716,
+            longitude=77.5946,
+            accuracy=5.0,
+            status=EmergencyStatus.SEARCHING.value,
+            priority="CRITICAL",
+        )
+        db.add(emergency)
+        await db.commit()
+        await db.refresh(emergency)
 
-            emergency_id_str = str(emergency.id)
+        emergency_id_str = str(emergency.id)
 
-            # 4. Dispatch to candidate
-            dispatch_result = await DispatchService.dispatch_to_next_candidate(
-                db=db,
-                emergency_id_str=emergency_id_str,
-                traffic_level=2,
-                avg_speed_kmh=30.0,
-            )
-            assert dispatch_result is not None
-            assert dispatch_result["driver_id"] == driver_id
-            assert "eta_minutes" in dispatch_result
+        # 4. Dispatch to candidate
+        dispatch_result = await DispatchService.dispatch_to_next_candidate(
+            db=db,
+            emergency_id_str=emergency_id_str,
+            traffic_level=2,
+            avg_speed_kmh=30.0,
+        )
+        assert dispatch_result is not None
+        assert dispatch_result["driver_id"] == driver_id
+        assert "eta_minutes" in dispatch_result
 
-            # 5. Driver ACCEPTS dispatch
-            resp_record = await DispatchService.respond_to_dispatch(
-                db=db,
-                driver=driver,
-                request_id_str=emergency_id_str,
-                action_str="ACCEPT",
-            )
-            assert resp_record.action == "ACCEPT"
+        # 5. Driver ACCEPTS dispatch
+        resp_record = await DispatchService.respond_to_dispatch(
+            db=db,
+            driver=driver,
+            request_id_str=emergency_id_str,
+            action_str="ACCEPT",
+        )
+        assert resp_record.action == "ACCEPT"
 
-            # Check emergency status is ACCEPTED
-            await db.refresh(emergency)
-            assert emergency.status == EmergencyStatus.ACCEPTED.value
-            assert emergency.assigned_driver_id == driver_id
+        # Check emergency status is ACCEPTED
+        await db.refresh(emergency)
+        assert emergency.status == EmergencyStatus.ACCEPTED.value
+        assert emergency.assigned_driver_id == driver_id
 
-            # 6. Complete Incident
-            completed_emergency = await DispatchService.complete_incident(
-                db=db,
-                driver=driver,
-                request_id_str=emergency_id_str,
-            )
-            assert completed_emergency.status == EmergencyStatus.COMPLETED.value
-    finally:
-        await engine.dispose()
+        # 6. Complete Incident
+        completed_emergency = await DispatchService.complete_incident(
+            db=db,
+            driver=driver,
+            request_id_str=emergency_id_str,
+        )
+        assert completed_emergency.status == EmergencyStatus.COMPLETED.value
 
 
 # Test 10: ML Failure Does Not Crash Emergency Creation
 @pytest.mark.asyncio
 async def test_ml_failure_graceful_fallback(monkeypatch):
-    try:
-        img_bytes = create_dummy_image_bytes()
+    img_bytes = create_dummy_image_bytes()
 
-        def mock_failing_predict(cls, *args, **kwargs):
-            raise RuntimeError("Simulated ML model prediction failure")
+    def mock_failing_predict(cls, *args, **kwargs):
+        raise RuntimeError("Simulated ML model prediction failure")
 
-        monkeypatch.setattr(SeverityService, "predict_severity", classmethod(mock_failing_predict))
+    monkeypatch.setattr(SeverityService, "predict_severity", classmethod(mock_failing_predict))
 
-        files = {
-            "front_photo": ("front.jpg", img_bytes, "image/jpeg"),
-            "rear_photo": ("rear.jpg", img_bytes, "image/jpeg"),
-        }
-        data = {
-            "latitude": "12.9716",
-            "longitude": "77.5946",
-            "accuracy": "5.0",
-            "patient_id": "TEST_PATIENT_FALLBACK",
-        }
+    files = {
+        "front_photo": ("front.jpg", img_bytes, "image/jpeg"),
+        "rear_photo": ("rear.jpg", img_bytes, "image/jpeg"),
+    }
+    data = {
+        "latitude": "12.9716",
+        "longitude": "77.5946",
+        "accuracy": "5.0",
+        "patient_id": "TEST_PATIENT_FALLBACK",
+    }
 
-        # Endpoint must succeed (201 Created) even if ML prediction fails
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post("/api/v1/emergencies", files=files, data=data)
+    # Endpoint must succeed (201 Created) even if ML prediction fails
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/emergencies", files=files, data=data)
 
-        assert response.status_code == 201
-        res_json = response.json()
-        assert res_json["success"] is True
-        assert res_json["status"] == "SEARCHING"
-        assert res_json["priority"] == "CRITICAL"
-    finally:
-        await engine.dispose()
+    assert response.status_code == 201
+    res_json = response.json()
+    assert res_json["success"] is True
+    assert res_json["status"] == "SEARCHING"
+    assert res_json["priority"] == "CRITICAL"

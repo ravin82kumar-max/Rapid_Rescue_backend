@@ -14,6 +14,7 @@ from app.api import (
     dispatch_router,
     websocket_router,
     ambulance_router,
+    patient_router,
 )
 
 # Ensure upload directories exist
@@ -39,6 +40,8 @@ app.include_router(location_router)
 app.include_router(dispatch_router)
 app.include_router(websocket_router)
 app.include_router(ambulance_router)
+app.include_router(patient_router)
+
 
 
 @app.get("/")

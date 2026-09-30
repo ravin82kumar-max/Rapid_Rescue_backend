@@ -36,6 +36,14 @@ from app.schemas.ambulance import (
     AmbulanceCreateSchema,
     AmbulanceResponseSchema,
 )
+from app.schemas.patient import (
+    PatientRegisterSchema,
+    PatientLoginSchema,
+    PatientSessionData,
+    PatientLoginResponse,
+    PatientProfileSchema,
+    PatientUpdateSchema,
+)
 
 __all__ = [
     "EmergencyCreateResponse",
@@ -62,4 +70,11 @@ __all__ = [
     "DispatchCompleteResponse",
     "AmbulanceCreateSchema",
     "AmbulanceResponseSchema",
+    "PatientRegisterSchema",
+    "PatientLoginSchema",
+    "PatientSessionData",
+    "PatientLoginResponse",
+    "PatientProfileSchema",
+    "PatientUpdateSchema",
 ]
+

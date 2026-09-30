@@ -98,6 +98,141 @@ Authorization: Bearer <your_jwt_access_token>
 }
 ```
 
+---
+
+### 2.3 Patient Register
+**Endpoint:** `POST /api/v1/auth/patient/register`  
+**Authentication:** None (Public)  
+**Content-Type:** `application/json`  
+**Source:** [`app/api/auth.py`](file:///c:/Users/Nature/Desktop/backend/app/api/auth.py#L75)
+
+#### Request Body:
+```json
+{
+  "fullName": "Jane Doe",
+  "mobileNumber": "9876543210",
+  "password": "PatientPassword123",
+  "email": "janedoe@example.com",
+  "address": "456 Park Avenue, Bangalore",
+  "bloodGroup": "O+",
+  "emergencyContactName": "John Doe",
+  "emergencyContactRelationship": "Spouse",
+  "emergencyContactMobile": "9876543211"
+}
+```
+
+#### Response `201 Created`:
+```json
+{
+  "success": true,
+  "message": "Patient registered successfully",
+  "patientId": "c3b5a9e1-4b10-4f93-8b9a-112233445566",
+  "fullName": "Jane Doe",
+  "mobileNumber": "9876543210",
+  "email": "janedoe@example.com",
+  "createdAt": "2026-09-30T18:30:00+00:00"
+}
+```
+
+#### Status Codes:
+- `201 Created` — Patient registered successfully.
+- `409 Conflict` — Mobile number or email address is already registered.
+- `422 Unprocessable Entity` — Validation error.
+
+---
+
+### 2.4 Patient Login
+**Endpoint:** `POST /api/v1/auth/patient/login`  
+**Authentication:** None (Public)  
+**Content-Type:** `application/json`  
+**Source:** [`app/api/auth.py`](file:///c:/Users/Nature/Desktop/backend/app/api/auth.py#L100)
+
+#### Request Body:
+```json
+{
+  "identifier": "9876543210",
+  "password": "PatientPassword123"
+}
+```
+*(Supports either mobile number or email address as `identifier`)*
+
+#### Response `200 OK`:
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "userId": "c3b5a9e1-4b10-4f93-8b9a-112233445566",
+  "patientId": "c3b5a9e1-4b10-4f93-8b9a-112233445566",
+  "role": "PATIENT",
+  "fullName": "Jane Doe",
+  "mobileNumber": "9876543210",
+  "email": "janedoe@example.com",
+  "token": "<jwt_access_token>",
+  "createdAt": "2026-09-30T18:30:00+00:00",
+  "session": {
+    "userId": "c3b5a9e1-4b10-4f93-8b9a-112233445566",
+    "patientId": "c3b5a9e1-4b10-4f93-8b9a-112233445566",
+    "role": "PATIENT",
+    "fullName": "Jane Doe",
+    "mobileNumber": "9876543210",
+    "email": "janedoe@example.com",
+    "token": "<jwt_access_token>",
+    "createdAt": "2026-09-30T18:30:00+00:00"
+  }
+}
+```
+
+#### Status Codes:
+- `200 OK` — Login successful, JWT issued.
+- `401 Unauthorized` — Invalid credentials or deactivated account.
+
+---
+
+### 2.5 Get Patient Profile
+**Endpoint:** `GET /api/v1/patients/me`  
+**Authentication:** `Authorization: Bearer <patient_jwt>`  
+**Source:** [`app/api/patient.py`](file:///c:/Users/Nature/Desktop/backend/app/api/patient.py#L14)
+
+#### Response `200 OK`:
+```json
+{
+  "id": "c3b5a9e1-4b10-4f93-8b9a-112233445566",
+  "fullName": "Jane Doe",
+  "mobileNumber": "9876543210",
+  "email": "janedoe@example.com",
+  "address": "456 Park Avenue, Bangalore",
+  "bloodGroup": "O+",
+  "emergencyContactName": "John Doe",
+  "emergencyContactRelationship": "Spouse",
+  "emergencyContactMobile": "9876543211",
+  "createdAt": "2026-09-30T18:30:00+00:00"
+}
+```
+
+#### Status Codes:
+- `200 OK` — Profile fetched successfully.
+- `401 Unauthorized` — Missing, expired, or invalid JWT.
+- `403 Forbidden` — Insufficient role/permissions.
+
+---
+
+### 2.6 Update Patient Profile
+**Endpoint:** `PATCH /api/v1/patients/me`  
+**Authentication:** `Authorization: Bearer <patient_jwt>`  
+**Source:** [`app/api/patient.py`](file:///c:/Users/Nature/Desktop/backend/app/api/patient.py#L32)
+
+#### Request Body:
+```json
+{
+  "address": "789 MG Road, Bangalore",
+  "bloodGroup": "A+"
+}
+```
+
+#### Response `200 OK`:
+Returns updated patient profile object.
+
+
 #### Response `200 OK`:
 ```json
 {
